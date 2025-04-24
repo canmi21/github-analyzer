@@ -1,6 +1,10 @@
 import { formatReportSections } from "@/utils/reportUtils";
 import QRCode from "qrcode";
 
+let url = import.meta.env.VITE_HOST || "https://gitbox.hust.online";
+if (!url.startsWith("https://") && !url.startsWith("http://")) {
+  url = "https://" + url;
+}
 interface Preset {
   name: string;
   description: string;
@@ -271,7 +275,7 @@ export const generateReportImage = async (
 
     // Generate and draw QR code in one clean sequence
     const qrCodeData = await generateQRCodeInBrowser(
-      "https://gitbox.hust.online",
+      url,
       qrSize
     );
     const qrBitmap = await createImageBitmap(qrCodeData);
@@ -298,7 +302,7 @@ export const generateReportImage = async (
 
     // URL in a different color for visual separation
     ctx.fillStyle = "#61afef"; // Light blue for URL to stand out
-    const urlText = "https://gitbox.hust.online";
+    const urlText = url.replace(/^http(s|):\/\//g, "")
     ctx.fillText(urlText, textX, subtitleY + 45); // Increased spacing
 
     // Draw "BingyanStudio" text

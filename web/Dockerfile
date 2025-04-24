@@ -8,7 +8,9 @@ RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache bun install --prod
 
 FROM base AS build
 ARG OAUTH_CLIENT_ID
+ARG VITE_HOST
 ENV VITE_OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+ENV VITE_HOST=${VITE_HOST}
 RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache bun install --frozen-lockfile
 RUN bun run build
 
