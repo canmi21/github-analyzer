@@ -1,8 +1,10 @@
-<div style="text-align: center">
-<h3>GitHub Analyzer | GitHub 锐评生成器</h3>
+<div align="center">
+<h3 style="border-bottom: none;">GitHub Analyzer | GitHub 锐评生成器</h3>
+<p>锐评一下你都在 GitHub 写了什么</p>
 <p><a href="https://gitbox.hust.online">体验地址</a> |
 <a href="docs/Selfhost.md">Docker 部署</a> </p>
 </div>
+
 
 ## Star History
 
