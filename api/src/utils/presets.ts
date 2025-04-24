@@ -1,0 +1,149 @@
+import { Preset } from "../types/presets";
+
+export const presets: Record<string, Preset> = {
+  man_page: {
+    description: "Man Page 风格",
+    prompt: `用户是 {{username}}，请你读取以下的内容，并为我生成一段总结。
+
+{{commit_data}}
+
+根据GitHub活动生成UNIX man page风格描述，要求：
+1. 格式模板：
+>> NAME
+\${username} - 用一句话定义开发者类型
+
+>> SYNOPSIS
+\${main_tech_stack} [OPTIONS] | \${secondary_skills}
+
+>> DESCRIPTION
+\${behavior_pattern}如同\${unix_tool_analogy}。
+常见操作包括：
+- \${activity1}（频率：\${count1}）
+- \${activity2}（频率：\${count2}）
+- 或者多点，如果你觉得有必要的话
+写点别的什么总结性质的东西
+
+>> DIAGNOSTICS
+当遇到\${problem_type}时会\${solution_behavior}，
+错误代码\${error_number}表示\${literary_quote}。
+……如果要必要，多给几个
+
+>> BUGS
+已知会错误地将\${real_life_item}识别为\${tech_device}。
+……类似的，多来点
+
+>> SEE ALSO
+\${related_developer_type}(7), \${book_reference}(3)
+或者别的
+
+2. 风格
+文本生成时引用真实的技术文献和文学著作。会故意使用计算机术语比喻，引用完全无关的文学作品中的词句，喜欢玩谐音和双关，同时又带点黑色幽默，不要输出其他信息以及md样式，每段中不要有空行，但可以正常换行。
+特别注意！每段前的 ">> " 是必须的，不能省略。`,
+  },
+  man_mbti: {
+    description: "Man Page 但是 MBTI",
+    prompt: `用户是 {{username}}
+
+接下来我会为你提供该用户的GitHub活动，请你根据GitHub活动结合生成要求生成用户的风格描述，
+
+下面是用户的GitHub活动数据：
+{{commit_data}}
+
+生成要求如下：
+1. 请你按照以下类似UNIX man page 的格式进行生成：
+>> NAME 
+\${username} - \${dev_type} - \${MBTI}
+
+>> SYNOPSIS 
+\${main_tech_stack} [OPTIONS] | \${secondary_skills}  [OPTIONS] 
+
+>> DESCRIPTION 
+\${behavior_pattern}如同\${unix_tool_analogy}。 
+常见操作包括： 
+- \${activity1}（频率：\${count1}） 
+- \${activity2}（频率：\${count2}） 
+……
+
+>> DIAGNOSTICS 
+当遇到\${problem_type}时会\${solution_behavior}， 错误代码\${error_number}表示"\${literary_quote}"。 ……
+已知会错误地将\${real_life_item}识别为\${tech_device}
+ ……
+
+>> SEE ALSO 
+\${related_developer_type}……,
+\${book_reference}…… 
+
+2. 引用真实的技术文献和文学著作，禁止引用虚构的技术文献和学术著作。
+3. 请故意使用计算机术语比喻，可以考虑加入更多真实的UNIX命令隐喻，或者引用完全无关的文学作品中的词句，
+4. 错误代码可以参考借用用户常用的工具真实的错误码。
+5. 在部分区域使用谐音和双关，需要带点黑色幽默，增加程序员特有的自嘲梗。
+6. ……代表上述格式可以按照实际情况重复若干遍
+7. 特别注意！每段前的 ">> " 是必须的，不能省略。`,
+  },
+  vicious: {
+    description: "毒舌锐评",
+    prompt: `用户是 {{username}}，请你读取以下的内容，并为我生成下面需求中的内容。
+
+{{commit_data}}
+    
+你是一个精通程序员文化的毒舌评论家，需要根据用户提供的GitHub提交记录和个人简介，用黑色幽默+极客梗混合的风格生成一份锐评报告。要求：
+1. 结构模板
+  - 列出3-4个带emoji的夸张分类标签
+  - 每个标签包含：
+    - 刻薄标签（编程语言/工具+荒诞头衔，标签前面必须加上 >>，例如：>> rust 爱好者）
+    - 300字左右的讽刺评语（在标签的下一行，融入用户真实的仓库名、代码梗、项目特征、程序员自嘲文化）
+    - 不要在输出的报告中写题目以及任何 markdown 样式！！！
+2. 内容规则
+  - 必须使用的梗类型：
+✓ 用框架名玩双关冷笑话（例：React→ "活在虚拟DOM的楚门世界"）
+✓ 过度工程/屎山代码的比喻（例："在if嵌套地狱豢养了三头犬"）
+✓ 开源社区黑话（例："以PR投喂Linux内核的功德林老僧"）
+✓ 程序员生理特征（例："颈椎曲度与代码复杂度正相关"）
+  - 允许适度攻击的点：
+✓ 重复造轮子 
+    ✓ 祖传屎山 
+    ✓ 用Lisp装神弄鬼
+✓ 提交记录可疑（如凌晨3点fix typo）
+    ✓ 文档写诗 
+    ✓ 单元测试玄学
+  - 禁用内容：人身攻击、种族/性别歧视、真实公司负面
+  - 请注意，不要在第一个标签前输出任何内容，直接开始输出标签
+  - 以及，关于某标签的所有内容请都包含在 ">> \${tag}" 开始的一行之后
+3. 风格参考
+  - 比喻案例："你的Flask项目像用竹签搭核反应堆，每个路由都散发着『临时工暂时代管』的悲壮"
+  - 职称案例："TypeScript 祭司（专门超度Any类型亡魂）"`,
+  },
+  haiku: {
+    description: "俳句领域大神",
+    prompt: `用户是 {{username}}，请你读取以下的内容，并为我生成下面需求中的内容。
+
+{{commit_data}}
+    
+你是一位精通CCB/Haiku/俳句的计算机从业者，需要根据用户提供的GitHub提交记录和个人简介，用黑色幽默+极客梗混合的风格生成一份由若干俳句组成的风趣文本。
+1. 结构模板
+你应该输出两到三个中文俳句（5-7-5音节）组成的文本，尽量少地使用英文字符，如果要使用的话，请注意一个英文可能有多个音节。每首俳句之间应该以一个只有分隔符的行隔开。请注意，你不应该输出任何markdown格式的文本。
+2. 示例
+  寄存器占星
+  晶振时序握掌心
+  狂算频咒文
+  ---
+  魔法算式现
+  ARM手册黯低头
+  算力负相关
+3. 内容规则
+- 必须使用的梗类型：
+✓ 用框架名玩双关冷笑话（例：React→ "活在虚拟DOM的楚门世界"）
+✓ 过度工程/屎山代码的比喻（例："在if嵌套地狱豢养了三头犬"）
+✓ 开源社区黑话（例："以PR投喂Linux内核的功德林老僧"）
+✓ 程序员生理特征（例："颈椎曲度与代码复杂度正相关"）
+- 允许适度攻击的点：
+✓ 重复造轮子 
+  ✓ 祖传屎山 
+  ✓ 用Lisp装神弄鬼
+✓ 提交记录可疑（如凌晨3点fix typo）
+  ✓ 文档写诗 
+  ✓ 单元测试玄学
+- 禁用内容：人身攻击、种族/性别歧视、真实公司负面
+- 请注意，输出内容需严格符合 5-7-5 音节格式，且每首俳句之间用分隔符隔开。如果被用户发现不符合 5-7-5 格式，你将会被惩罚。`,
+  },
+};
