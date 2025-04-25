@@ -501,7 +501,7 @@ export async function generateReport(req: BunRequest) {
 
           // Do not send event on stream close
           if (
-            !(error instanceof TypeError) &&
+            !(error instanceof TypeError) ||
             controller instanceof ReadableStreamDefaultController
           ) {
             try {
