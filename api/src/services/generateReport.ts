@@ -40,7 +40,10 @@ async function getUserDataFromCache(login: string): Promise<UserData | null> {
 }
 
 // Function to save user data to cache
-async function saveUserDataToCache(login: string, data: UserData): Promise<void> {
+async function saveUserDataToCache(
+  login: string,
+  data: UserData
+): Promise<void> {
   try {
     await redisClient.set(`userdata:${login}`, JSON.stringify(data));
     // Set expiration to 1 hour (in seconds)
@@ -197,7 +200,7 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
 
   // Save to cache before returning
   await saveUserDataToCache(login, parsedData);
-  
+
   return parsedData;
 }
 
@@ -428,50 +431,30 @@ export async function generateReport(req: BunRequest) {
             return;
           }
 
-          if (streamingEnabled) {
-            // Streaming mode
-            const stream = await openai.chat.completions.create({
-              messages: [
-                {
-                  role: "system",
-                  content: initialPrompt
-                    .replace("{{commit_data}}", parsedData)
-                    .replace("{{username}}", rawData.username),
-                },
-              ],
-              model: process.env.OPENAI_MODEL || "deepseek-chat",
-              stream: true,
-            });
+          const stream = await openai.chat.completions.create({
+            messages: [
+              {
+                role: "system",
+                content: initialPrompt
+                  .replace("{{commit_data}}", parsedData)
+                  .replace("{{username}}", rawData.username),
+              },
+            ],
+            model: process.env.OPENAI_MODEL || "deepseek-chat",
+            stream: true,
+          });
 
-            // Process the stream
-            for await (const chunk of stream) {
-              const content = chunk.choices[0]?.delta?.content || "";
-              if (content) {
-                reportContent += content;
-                // Send incremental updates to the client
-                sendEvent("chunk", { content });
-              }
+          // Process the stream
+          for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (content) {
+              reportContent += content;
+              // Send incremental updates to the client
+              sendEvent("chunk", { content });
             }
-
-            console.log("Streaming report generation completed");
-          } else {
-            // Non-streaming mode
-            const completion = await openai.chat.completions.create({
-              messages: [
-                {
-                  role: "system",
-                  content: initialPrompt
-                    .replace("{{commit_data}}", parsedData)
-                    .replace("{{username}}", rawData.username),
-                },
-              ],
-              model: process.env.OPENAI_MODEL || "deepseek-chat",
-              stream: false,
-            });
-
-            reportContent = completion.choices[0].message.content || "";
-            console.log("Non-streaming report generation completed");
           }
+
+          console.log("Streaming report generation completed");
 
           if (reportContent) {
             sendEvent("status", { message: "正在保存..." });
@@ -490,9 +473,9 @@ export async function generateReport(req: BunRequest) {
 
           // Do not send event on stream close
           if (!(error instanceof TypeError)) {
-            sendEvent("generate_error", {
-              message: "服务器繁忙，请稍后再试。",
-            });
+            // sendEvent("generate_error", {
+            //   message: "服务器繁忙，请稍后再试。",
+            // });
             controller.close();
           }
         }
