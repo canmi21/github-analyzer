@@ -1,4 +1,4 @@
-# Selfhost
+# Docker Compose 部署
 
 ## Clone
 ```shell
@@ -10,8 +10,8 @@ cp .env.example .env
 在 [Github Apps](https://github.com/settings/apps) `New Github App`
 
 - `Github App Name` 随意填写
-- `Homepage URL` 如：https://gitbox.hust.online
-- `Callback URL` 如：https://gitbox.hust.online/callback
+- `Homepage URL` 如：http://localhost:8010
+- `Callback URL` 如：http://localhost:8010/callback
 - `Webhook` 取消勾选 `Active`
 
 **权限选择**
@@ -26,6 +26,8 @@ User permissions:
     (你说得对，但是没有 Read-only 这个选项)
 
 创建 App 并生成 Secret
+
+## 填写环境变量
 
 在 `.env` 中填入：
 ```ini
