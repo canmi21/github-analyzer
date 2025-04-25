@@ -39,7 +39,16 @@ serve({
     "/api/user": getAuthenticatedUser,
     "/api/report": generateReport,
     "/api/presets": getPresets,
-  }
+  },
+  error(error) {
+    console.error(error);
+    return new Response(`Internal Error: ${error.message}`, {
+      status: 500,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
+  },
 });
 
 console.log(`Server running on http://localhost:${PORT}`);

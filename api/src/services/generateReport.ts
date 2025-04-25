@@ -22,9 +22,6 @@ const redisClient = createClient({
   }
 })();
 
-// Track pending report generation requests
-const pendingReports = new Set<string>();
-
 // Function to get user data from cache
 async function getUserDataFromCache(login: string): Promise<UserData | null> {
   try {
@@ -279,6 +276,37 @@ async function saveReport(key: string, report: string): Promise<void> {
   }
 }
 
+// Check if a report generation is already pending
+async function isReportGenerationPending(key: string): Promise<boolean> {
+  try {
+    const status = await redisClient.get(`pending:${key}`);
+    return status === "1";
+  } catch (err) {
+    console.error("Redis check pending status error:", err);
+    return false;
+  }
+}
+
+// Mark a report generation as pending
+async function setReportGenerationPending(key: string): Promise<void> {
+  try {
+    await redisClient.set(`pending:${key}`, "1");
+    // Set expiration to 10 minutes to avoid orphaned pending statuses
+    await redisClient.expire(`pending:${key}`, 10 * 60);
+  } catch (err) {
+    console.error("Redis set pending status error:", err);
+  }
+}
+
+// Clear the pending status of a report generation
+async function clearReportGenerationPending(key: string): Promise<void> {
+  try {
+    await redisClient.del(`pending:${key}`);
+  } catch (err) {
+    console.error("Redis clear pending status error:", err);
+  }
+}
+
 export async function fetchUserDataEndpoint(req: BunRequest) {
   const sessionId = req.cookies.get("session");
   if (sessionId === null) {
@@ -389,7 +417,7 @@ export async function generateReport(req: BunRequest) {
           }
 
           // Check if a report is already being generated for this data
-          if (pendingReports.has(reportKey)) {
+          if (await isReportGenerationPending(reportKey)) {
             sendEvent("generate_error", {
               message: "报告正在生成中，请等待上次生成结束后再试。",
             });
@@ -398,12 +426,12 @@ export async function generateReport(req: BunRequest) {
           }
 
           // Mark this report as pending
-          pendingReports.add(reportKey);
+          await setReportGenerationPending(reportKey);
 
           // Get the prompt from presets
           const initialPrompt = presets[presetKey].prompt;
           if (!initialPrompt) {
-            pendingReports.delete(reportKey);
+            await clearReportGenerationPending(reportKey);
             sendEvent("generate_error", {
               message: `Preset '${presetKey}' not found.`,
             });
@@ -423,7 +451,7 @@ export async function generateReport(req: BunRequest) {
           let reportContent = "";
 
           if (rawData.username === null) {
-            pendingReports.delete(reportKey);
+            await clearReportGenerationPending(reportKey);
             sendEvent("generate_error", {
               message: `服务器出错，请稍后再试。`,
             });
@@ -462,28 +490,38 @@ export async function generateReport(req: BunRequest) {
           }
 
           // Remove the pending status
-          pendingReports.delete(reportKey);
+          await clearReportGenerationPending(reportKey);
 
           // Send the final report content
           sendEvent("complete", { message: reportContent });
           controller.close();
         } catch (error) {
           console.error("Error generating report:", error);
-          pendingReports.delete(reportKey);
+          await clearReportGenerationPending(reportKey);
 
           // Do not send event on stream close
-          if (!(error instanceof TypeError)) {
-            // sendEvent("generate_error", {
-            //   message: "服务器繁忙，请稍后再试。",
-            // });
-            controller.close();
+          if (
+            !(error instanceof TypeError) &&
+            controller instanceof ReadableStreamDefaultController
+          ) {
+            try {
+              // sendEvent("generate_error", {
+              //   message: "服务器繁忙，请稍后再试。",
+              // });
+              controller.close();
+            } catch (err) {
+              console.error("Error closing stream:", err);
+            }
           }
         }
       })();
     },
     cancel() {
       console.log("Report generation cancelled");
-      pendingReports.delete(reportKey);
+      // Async function in sync context, must be handled properly
+      clearReportGenerationPending(reportKey).catch(err => 
+        console.error("Error clearing pending status on cancel:", err)
+      );
     },
   });
 
