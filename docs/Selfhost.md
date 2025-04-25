@@ -18,17 +18,21 @@ cp .env.example .env
 
 Repository permissions:
   - Metadata: Read-only
-  - Pull requests: Read-only
   - Contents: Read-only
 
 User permissions:
-  - Profile: Read-only
+  - Events: Read-only
+  - Profile: Read and write
+    (你说得对，但是没有 Read-only 这个选项)
 
 创建 App 并生成 Secret
 
 在 `.env` 中填入：
 ```ini
 APP_ID=1234567 # Github App ID
+PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----
+
+-----END RSA PRIVATE KEY-----"
 OAUTH_CLIENT_ID=1tIsAFaK3C1Ient1DplZ # Github Apps Client ID
 OAUTH_CLIENT_SECRET=123456789abcdef123456789abcdef12345678 # Github Apps Client Secret
 VITE_HOST=https://gitbox.hust.online # 域名，仅用于图片分享
