@@ -5,6 +5,19 @@
 <a href="docs/Selfhost.md">Docker 部署</a> </p>
 </div>
 
+## 项目介绍
+
+本项目旨在分析 GitHub 上的项目和用户活动，通过 AI 生成有趣的评论和总结。
+
+## 功能
+
+1. 生成 GitHub 锐评
+2. 生成图片报告以供分享
+3. 支持自部署！
+
+## 看看效果？
+
+<img src="docs/assets/report-showcase.png" />
 
 ## Star History
 
@@ -17,6 +30,7 @@
 </a>
 
 # LICENSE
+
 ```
 MIT License
 
