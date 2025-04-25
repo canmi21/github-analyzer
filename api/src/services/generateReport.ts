@@ -374,6 +374,18 @@ export async function generateReport(req: BunRequest) {
   const presetKey = url.searchParams.get("preset") || "man_page";
   const forceRegen = url.searchParams.get("force_regen") === "true";
 
+  if (!presets[presetKey]) {
+    return Response.json(
+      {
+        state: "Failed",
+        message: `Preset '${presetKey}' not found.`,
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
   // Generate a unique key for this report that includes the preset
   const reportKey = generateReportKey(session?.login, presetKey);
 
