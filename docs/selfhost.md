@@ -22,8 +22,6 @@ Repository permissions:
 
 User permissions:
   - Events: Read-only
-  - Profile: Read and write
-    (你说得对，但是没有 Read-only 这个选项)
 
 创建 App 并生成 Secret
 
