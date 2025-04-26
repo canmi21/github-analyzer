@@ -87,7 +87,12 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
           }
         }
         repositoriesContributedTo(
-          first: 100
+          first: 30
+          privacy: PUBLIC
+          orderBy: {
+            field: UPDATED_AT
+            direction: DESC
+          }
           includeUserRepositories: true
           contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
         ) {
