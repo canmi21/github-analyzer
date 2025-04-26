@@ -72,7 +72,7 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
           emoji
           message
         }
-        pullRequests(first: 100, orderBy: {
+        pullRequests(first: 20, orderBy: {
           field: CREATED_AT
           direction: DESC
         }) {
@@ -87,20 +87,15 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
           }
         }
         repositoriesContributedTo(
-          first: 30
+          first: 20
           privacy: PUBLIC
           orderBy: {
             field: UPDATED_AT
             direction: DESC
           }
           includeUserRepositories: true
-          contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]
+          contributionTypes: [COMMIT]
         ) {
-          pageInfo {
-            startCursor
-            hasNextPage
-            endCursor
-          }
           nodes {
             description
             nameWithOwner
@@ -108,7 +103,7 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
               target {
                 ... on Commit {
                   history(
-                    first: 100
+                    first: 30
                     author: {id: "${userId}"}
                   ) {
                     nodes {
