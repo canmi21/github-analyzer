@@ -292,7 +292,7 @@ async function setReportGenerationPending(key: string): Promise<void> {
   try {
     await redisClient.set(`pending:${key}`, "1");
     // Set expiration to 10 minutes to avoid orphaned pending statuses
-    await redisClient.expire(`pending:${key}`, 10 * 60);
+    await redisClient.expire(`pending:${key}`, 3 * 60);
   } catch (err) {
     console.error("Redis set pending status error:", err);
   }
