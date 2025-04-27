@@ -16,12 +16,7 @@ cp .env.example .env
 
 **权限选择**
 
-Repository permissions:
-  - Metadata: Read-only
-  - Contents: Read-only
-
-User permissions:
-  - Events: Read-only
+None. 无需选择任何权限。
 
 创建 App 并生成 Secret
 
