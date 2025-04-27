@@ -5,7 +5,7 @@ import { Octokit } from "octokit";
 import { openai } from "..";
 import { createClient } from "redis";
 import { presets } from "../utils/presets";
-import { PullRequest, UserData } from "../types/data";
+import { PullRequest, Repository, UserData } from "../types/data";
 
 // Redis client setup
 const redisClient = createClient({
@@ -50,17 +50,55 @@ async function saveUserDataToCache(
   }
 }
 
-async function fetchUserData(octokit: Octokit): Promise<UserData> {
-  const currentUser = await octokit.rest.users.getAuthenticated();
-  const { login, node_id: userId } = currentUser.data;
+function parseCommits(nodes: any): Repository[] {
+  return nodes
+    .filter(
+      (repo: any) =>
+        repo !== null &&
+        repo.mainCommits !== null &&
+        repo.mainCommits.target !== null
+    )
+    .map((repo: any) => {
+      const { nameWithOwner, description, mainCommits } = repo;
+      // Handle null mainCommits with optional chaining and default to empty array
+      const nodes = mainCommits?.target?.history?.nodes;
+      const commits =
+        nodes?.map((commit: any) => {
+          return {
+            message: commit.message,
+            committedDate: new Date(commit.committedDate).toLocaleString(
+              "zh-CN"
+            ),
+          };
+        }) || [];
+      return {
+        nameWithOwner,
+        description,
+        commits: commits.filter((commit: any) => commit !== null),
+      };
+    })
+    .filter((repo: any) => repo.commits && repo.commits.length > 0);
+}
 
-  // Check if we have cached data
-  const cachedData = await getUserDataFromCache(login);
-  if (cachedData) {
-    console.log(`Using cached user data for ${login}`);
-    return cachedData;
-  }
+function parsePullRequests(nodes: any): PullRequest[] {
+  return nodes.map((pr) => {
+    return {
+      title: pr.title,
+      body: pr.body,
+      createdAt: new Date(pr.createdAt).toLocaleString("zh-CN"),
+      repository: {
+        nameWithOwner: pr.repository.nameWithOwner,
+        description: pr.repository.description,
+      },
+    };
+  });
+}
 
+async function fetchUserDataBatched(
+  octokit: Octokit,
+  login: string,
+  userId: string
+): Promise<Omit<UserData, "profileContent">> {
   console.log(`Fetching fresh user data for ${login}`);
   const commitData: any = await octokit.graphql(`
     query {
@@ -120,6 +158,168 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
     }
   `);
 
+  const parsedCommits: Repository[] = parseCommits(
+    commitData.user.repositoriesContributedTo.nodes
+  );
+  const parsedPullRequests: PullRequest[] = parsePullRequests(
+    commitData.user.pullRequests.nodes
+  );
+
+  const parsedData: Omit<UserData, "profileContent"> = {
+    username: login,
+    name: commitData.user.name,
+    bio: commitData.user.bio,
+    location: commitData.user.location,
+    status: commitData.user.status,
+    pullRequests: parsedPullRequests,
+    repositoriesContributedTo: parsedCommits,
+  };
+
+  return parsedData;
+}
+
+async function fetchUserDataPaged(
+  octokit: Octokit,
+  login: string,
+  userId: string
+): Promise<Omit<UserData, "profileContent">> {
+  console.log(`Batching failed. Slowly fetching fresh user data for ${login}`);
+  const otherData: any = await octokit.graphql(`
+    query {
+      user(login: "${login}") {
+        name
+        bio
+        location
+        status {
+          emoji
+          message
+        }
+        pullRequests(first: 20, orderBy: {
+          field: CREATED_AT
+          direction: DESC
+        }) {
+          nodes {
+            repository {
+              nameWithOwner
+              description
+            }
+            title
+            body
+            createdAt
+          }
+        }
+      }
+    }
+  `);
+
+  // Fetch repositories with pagination to get up to 30 repos
+  let repositoriesData = [];
+  let hasNextPage = true;
+  let endCursor = null;
+  let repoCount = 0;
+  const maxRepos = 30; // Maximum number of repos to fetch
+  const perPage = 10; // Number of repos per page
+
+  while (hasNextPage && repoCount < maxRepos) {
+    const cursorParam = endCursor ? `, after: "${endCursor}"` : "";
+    const commitQuery = `
+      query {
+        user(login: "${login}") {
+          repositoriesContributedTo(
+            first: ${perPage}
+            privacy: PUBLIC
+            orderBy: {
+              field: UPDATED_AT
+              direction: DESC
+            }
+            includeUserRepositories: true
+            contributionTypes: [COMMIT]
+            ${cursorParam}
+          ) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              description
+              nameWithOwner
+              mainCommits: defaultBranchRef {
+                target {
+                  ... on Commit {
+                    history(
+                      first: 30
+                      author: {id: "${userId}"}
+                    ) {
+                      nodes {
+                        message
+                        committedDate
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const pageData: any = await octokit.graphql(commitQuery);
+
+    const pageNodes = pageData.user.repositoriesContributedTo.nodes || [];
+    repositoriesData = repositoriesData.concat(pageNodes);
+    repoCount += pageNodes.length;
+
+    hasNextPage = pageData.user.repositoriesContributedTo.pageInfo.hasNextPage;
+    endCursor = pageData.user.repositoriesContributedTo.pageInfo.endCursor;
+
+    // Break early if we got fewer repositories than requested per page
+    if (pageNodes.length < perPage) {
+      break;
+    }
+  }
+
+  const parsedCommits: Repository[] = parseCommits(repositoriesData);
+  const parsedPullRequests: PullRequest[] = parsePullRequests(
+    otherData.user.pullRequests.nodes
+  );
+
+  const parsedData: Omit<UserData, "profileContent"> = {
+    username: login,
+    name: otherData.user.name,
+    bio: otherData.user.bio,
+    location: otherData.user.location,
+    status: otherData.user.status,
+    pullRequests: parsedPullRequests,
+    repositoriesContributedTo: parsedCommits,
+  };
+
+  return parsedData;
+}
+
+async function fetchUserData(octokit: Octokit): Promise<UserData> {
+  const currentUser = await octokit.rest.users.getAuthenticated();
+  const { login, node_id: userId } = currentUser.data;
+
+  // Check if we have cached data
+  const cachedData = await getUserDataFromCache(login);
+  if (cachedData) {
+    console.log(`Using cached user data for ${login}`);
+    return cachedData;
+  }
+
+  let rawData: Omit<UserData, "profileContent"> | null = null;
+  try {
+    const batchedData = await fetchUserDataBatched(octokit, login, userId);
+    rawData = batchedData;
+  } catch (err) {
+    console.error("Error fetching batched user data:", err);
+
+    // Fallback to paged fetching if batched fetching fails
+    const pagedData = await fetchUserDataPaged(octokit, login, userId);
+    rawData = pagedData;
+  }
+
   let profileContent = "";
   try {
     const profileResp = await octokit.rest.repos.getContent({
@@ -142,56 +342,8 @@ async function fetchUserData(octokit: Octokit): Promise<UserData> {
     profileContent = "Profile content not available.";
   }
 
-  // Parse the commit data to feed llm
-  const parsedCommits = commitData.user.repositoriesContributedTo.nodes
-    .filter(
-      (repo: any) =>
-        repo !== null &&
-        repo.mainCommits !== null &&
-        repo.mainCommits.target !== null
-    )
-    .map((repo: any) => {
-      const { nameWithOwner, description, mainCommits } = repo;
-      // Handle null mainCommits with optional chaining and default to empty array
-      const nodes = mainCommits?.target?.history?.nodes;
-      const commits =
-        nodes?.map((commit: any) => {
-          return {
-            message: commit.message,
-            committedDate: new Date(commit.committedDate).toLocaleString(
-              "zh-CN"
-            ),
-          };
-        }) || [];
-      return {
-        nameWithOwner,
-        description,
-        commits: commits.filter((commit: any) => commit !== null),
-      };
-    })
-    .filter((repo: any) => repo.commits && repo.commits.length > 0);
-
-  const parsedPullRequests: PullRequest[] =
-    commitData.user.pullRequests.nodes.map((pr) => {
-      return {
-        title: pr.title,
-        body: pr.body,
-        createdAt: new Date(pr.createdAt).toLocaleString("zh-CN"),
-        repository: {
-          nameWithOwner: pr.repository.nameWithOwner,
-          description: pr.repository.description,
-        },
-      };
-    });
-
   const parsedData = {
-    username: login,
-    name: commitData.user.name,
-    bio: commitData.user.bio,
-    location: commitData.user.location,
-    status: commitData.user.status,
-    pullRequests: parsedPullRequests,
-    repositoriesContributedTo: parsedCommits,
+    ...rawData,
     profileContent: profileContent,
   };
 
@@ -531,7 +683,7 @@ export async function generateReport(req: BunRequest) {
     cancel() {
       console.log("Report generation cancelled");
       // Async function in sync context, must be handled properly
-      clearReportGenerationPending(reportKey).catch(err => 
+      clearReportGenerationPending(reportKey).catch((err) =>
         console.error("Error clearing pending status on cancel:", err)
       );
     },
