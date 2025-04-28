@@ -143,6 +143,7 @@ async function fetchUserDataBatched(
                   history(
                     first: 30
                     author: {id: "${userId}"}
+                    since: "2023-04-01T00:00:00Z"
                   ) {
                     nodes {
                       message
@@ -218,7 +219,7 @@ async function fetchUserDataPaged(
   let endCursor = null;
   let repoCount = 0;
   const maxRepos = 30; // Maximum number of repos to fetch
-  const perPage = 10; // Number of repos per page
+  const perPage = 6; // Number of repos per page
 
   while (hasNextPage && repoCount < maxRepos) {
     const cursorParam = endCursor ? `, after: "${endCursor}"` : "";
@@ -249,6 +250,7 @@ async function fetchUserDataPaged(
                     history(
                       first: 30
                       author: {id: "${userId}"}
+                      since: "2024-04-01T00:00:00Z"
                     ) {
                       nodes {
                         message

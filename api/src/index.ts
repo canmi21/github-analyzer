@@ -28,7 +28,7 @@ export const openai = new OpenAI({
 const PORT = process.env.PORT || 3000;
 
 serve({
-  idleTimeout: 120,
+  idleTimeout: 180,
   port: PORT,
   websocket: {
     message: () => { }, // Empty handler
